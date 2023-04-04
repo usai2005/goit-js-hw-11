@@ -5,7 +5,7 @@ import './css/styles.css';
 import "simplelightbox/dist/simple-lightbox.min.css";
 import { picturesApiService } from './js/picture-service';
 import { addToDOM, gallery } from './js/addingToDOM';
-import { scrollNotificationData } from './js/infinite-scroll';
+import { infiniteScroll, scrollNotificationData } from './js/infinite-scroll';
 
 //variables
 const body = document.querySelector('body');
@@ -36,8 +36,11 @@ export const lightbox = new SimpleLightbox('.gallery a', { captionsData: 'alt', 
 const { height: headerHeight } = header.getBoundingClientRect();
 document.body.style.paddingTop = `${headerHeight}px`;
 
-//listener on submitBtn click
+//listeners
 form.addEventListener('submit', onSubmitBtnClick);
+document.addEventListener('scroll', () => {
+    infiniteScroll();
+});
 
 //getting fetch result
 function onSubmitBtnClick(e) {
@@ -52,36 +55,34 @@ function onSubmitBtnClick(e) {
   
     scrollNotificationData.endNotificationShown = false;
 
-//backend response fetching
+//getting and using backend response for first page
     picturesApiService.fetchPictures()
-      .then((response) => {
-        
-        const noResults = response.data.hits.length === 0;
+        .then((response) => {const noResults = response.data.hits.length === 0;
 
 //notification if no result or amount of pictures found
-        if (noResults) {
+    if (noResults) {
 
-          Notify.failure('Sorry, there are no images matching your search query. Please try again.');
+        Notify.failure('Sorry, there are no images matching your search query. Please try again.');
         } else {
 
-          Notify.info(`Hooray! We found ${response.data.totalHits} images.`);
+        Notify.info(`Hooray! We found ${response.data.totalHits} images.`);
 
 //notification if all pictures were loaded
-          if (picturesApiService.allPicturesLoaded()) {
+        if (picturesApiService.allPicturesLoaded()) {
 
             Notify.failure(`We're sorry, but you've reached the end of search results.`);
 
             scrollNotificationData.endNotificationShown = true;
-          };
-
-//calling of addToDOM function
-addToDOM(response);
         };
 
+//calling of addToDOM function
+        addToDOM(response);
+    };
+
 //refresh method of simplelightbox using
-        lightbox.refresh();
-      })
+    lightbox.refresh();
+    })
 
 //if error was caught      
-      .catch(error => console.error(error));
+    .catch(error => console.error(error));
 };
