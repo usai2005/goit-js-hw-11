@@ -1,5 +1,5 @@
 import { picturesApiService } from './picture-service';
-import { addToDOM, gallery } from './addingToDOM';
+import { addToDOM, gallery, timerId } from './addingToDOM';
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import "simplelightbox/dist/simple-lightbox.min.css";
 import { lightbox } from '../index';
