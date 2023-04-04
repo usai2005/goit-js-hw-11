@@ -1,24 +1,19 @@
-//IMPORTS
-import throttle from 'lodash.throttle';
-import debounce from 'lodash.debounce';
-// import SimpleLightbox from "simplelightbox";
+//imports
+import SimpleLightbox from "simplelightbox";
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import './css/styles.css';
 import "simplelightbox/dist/simple-lightbox.min.css";
-// import {loadNewPageByScroll} from './js/infinite-scroll';
-// import noMorePictures from './js/no-more-pictures';
 import { picturesApiService } from './js/picture-service';
-import { createMarkup, gallery } from './js/create-markup';
+import { addToDOM, gallery } from './js/addingToDOM';
+import { scrollNotificationData } from './js/infinite-scroll';
 
-
-
-//VARIABLES
+//variables
 const body = document.querySelector('body');
 const form = document.querySelector('.search-form');
 const searchBtn = document.querySelector('[type="submit"]');
 const inputField = document.querySelector('[name="searchQuery"]');
 
-//STATIC MARKUP CREATING
+//static markup creating
 inputField.classList.add('search-field');
 searchBtn.classList.add('search-btn');
 
@@ -34,102 +29,59 @@ header.prepend(form);
 section.prepend(container);
 container.prepend(gallery);
 
-//USING SIMPLELIGHTBOX
+//usage of simplelightbox
+export const lightbox = new SimpleLightbox('.gallery a', { captionsData: 'alt', captionDelay: 250 });
 
-    
-//FIXED HEADER
+//fixed header
 const { height: headerHeight } = header.getBoundingClientRect();
 document.body.style.paddingTop = `${headerHeight}px`;
 
-//SEARCHING BY REQUEST AND CREATING DYNAMIC MARKUP
-// let searchQuery = '';
-
-// console.log(picturesApiService)
-
+//listener on submitBtn click
 form.addEventListener('submit', onSubmitBtnClick);
 
-//GETTING FETCH RESULT
+//getting fetch result
 function onSubmitBtnClick(e) {
 
+//clearing markup
     gallery.innerHTML = '';
 
+//preventing default behaviour
     e.preventDefault();
   
     picturesApiService.query = e.currentTarget.elements.searchQuery.value;
+  
+    scrollNotificationData.endNotificationShown = false;
 
+//backend response fetching
     picturesApiService.fetchPictures()
-        .then(createMarkup)
-        .catch(error => console.error(error));
-};
-
-// loadNewPageByScroll();
-
-//LOADING ADDITIONAL PAGES BY SCROLL. CALLING DYNAMIC MARKUP CREATING FUNCTION. SCROLLING BY SCROLLBY
-
-
-    // const onScroll = function() {
+      .then((response) => {
         
-    // const { height: cardHeight } = gallery.firstElementChild.getBoundingClientRect();
+        const noResults = response.data.hits.length === 0;
 
-    // window.scrollBy({
-    //     top: cardHeight * 2 + 30,
-    //     behavior: 'smooth',
-    // });
+//notification if no result or amount of pictures found
+        if (noResults) {
 
-    //     const {
-    //         scrollTop,
-    //         scrollHeight,
-    //         clientHeight
-    //     } = document.documentElement;
-        
-    //     if (scrollTop + clientHeight >= scrollHeight - 200) {
-            
-    //         picturesApiService.fetchPictures(searchQuery)
-    //             .then(createMarkup)
-    //             .catch(error => console.error(error));
-    //     };
-    // };
-    
-// function infiniteScroll() {
+          Notify.failure('Sorry, there are no images matching your search query. Please try again.');
+        } else {
 
-//     if (!isScrollListenerRegistered) {
-//         isScrollListenerRegistered = true;
-        
-//         document.addEventListener('scroll', () => {
-//             const {
-//                 scrollTop,
-//                 scrollHeight,
-//                 clientHeight
-//             } = document.documentElement;
-        
-//             if (scrollTop + clientHeight >= scrollHeight - 200) {
-//             picturesApiService.fetchPictures(searchQuery)
-//                 .then(createMarkup)
-//                 .then(lightbox.refresh())
-//                 .catch(error => console.error(error));
-//             };
-//         });
-//     };
-// };
+          Notify.info(`Hooray! We found ${response.data.totalHits} images.`);
 
-// function searchResultNotification(arrOfPictures) {
-//     if (arrOfPictures.length === 0) {
-//         Notify.failure('Sorry, there are no images matching your search query. Please try again.');
-//         return;
-//     } else if (picturesApiService.page === 1) {
-//         Notify.info(`Hooray! We found ${pictures.data.totalHits} images.`);
-//     };
-// };
-    
-    
+//notification if all pictures were loaded
+          if (picturesApiService.allPicturesLoaded()) {
 
-function noMorePictures() {
+            Notify.failure(`We're sorry, but you've reached the end of search results.`);
 
-    Notify.failure(`We're sorry, but you've reached the end of search results.`);
+            scrollNotificationData.endNotificationShown = true;
+          };
 
-    if (Math.ceil(picturesApiService.totalHits / picturesApiService.perPage) === 1) {
-        return;
-    }
+//calling of addToDOM function
+addToDOM(response);
+        };
 
-    document.removeEventListener('scroll', onScroll);
+//refresh method of simplelightbox using
+        lightbox.refresh();
+      })
+
+//if error was caught      
+      .catch(error => console.error(error));
 };

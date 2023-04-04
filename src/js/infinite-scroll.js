@@ -1,36 +1,53 @@
 import { picturesApiService } from './picture-service';
-import { createMarkup, gallery } from './create-markup';
-import { galleryMarkup } from './one-query-markup';
+import { addToDOM, gallery } from './addingToDOM';
+import { Notify } from 'notiflix/build/notiflix-notify-aio';
+import "simplelightbox/dist/simple-lightbox.min.css";
+import { lightbox } from '../index';
 
-// let isScrollListenerRegistered = false;
+export const scrollNotificationData = { endNotificationShown: false };
 
-// if (!isScrollListenerRegistered) {
-//         isScrollListenerRegistered = true;
+const {
+  scrollTop,
+  scrollHeight,
+  clientHeight,
+} = document.documentElement;
 
-    document.addEventListener('scroll', infiniteScroll)
-// };
+const ReachedBottom = scrollTop + clientHeight >= scrollHeight - 200;
 
-export function infiniteScroll(arrOfPictures) {
-console.log(arrOfPictures)
-            const {
-                scrollTop,
-                scrollHeight,
-                clientHeight
-            } = document.documentElement;
-        
-            if (scrollTop + clientHeight >= scrollHeight - 200) {
+//calling addToDOM function if all conditions are OK or notification if doesn't exist more pictures to show 
+export function infiniteScroll() {
 
-                picturesApiService.fetchPictures()
-                    // .then(createMarkup)
-                    .then((response) => {
-                        const preparedMarkup = createMarkup(response)
-                    })
-                    // .then(lightbox.refresh)
-                    .catch(error => console.error(error));
-    };
+  if (gallery.classList.contains('byScroll') && !picturesApiService.allPicturesLoaded() && ReachedBottom) {
+
+    gallery.classList.remove('byScroll')
+   
+    picturesApiService.fetchPictures()
+      .then(response => {
+        addToDOM(response);
+        lightbox.refresh();
+      })
+      .catch(error => console.error(error));
     
-    document.removeEventListener('scroll', infiniteScroll)
-            //ADDING NEW MARKUP TO DOM
-            // gallery.insertAdjacentHTML('beforeend', galleryMarkup(arrOfPictures));
-            // return;
+  } else if (picturesApiService.allPicturesLoaded() && !scrollNotificationData.endNotificationShown) {
+
+     Notify.failure(`We're sorry, but you've reached the end of search results.`);
+     scrollNotificationData.endNotificationShown = true;
+  };
 };
+
+//autoscroll function and calling infiniteScroll function
+export function smoothAutoScroll() {
+  const { height: cardHeight } = gallery.firstElementChild.getBoundingClientRect();
+    
+        window.scrollBy({
+            top: cardHeight * 2 + 30,
+            behavior: 'smooth',
+        });
+
+        if (document.documentElement.scrollTop + document.documentElement.clientHeight >= document.documentElement.scrollHeight - 200) {
+
+            infiniteScroll()
+
+            clearInterval(timerId);
+        };
+    };
