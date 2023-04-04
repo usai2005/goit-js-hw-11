@@ -1,5 +1,4 @@
 import { galleryMarkup } from './create-markup'
-import { smoothScroll } from './infinite-scroll';
 
 export const gallery = document.querySelector('.gallery');
 
